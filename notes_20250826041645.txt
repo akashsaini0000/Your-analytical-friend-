@@ -1,0 +1,56 @@
+08.26 4:15 AM
+App.py
+import streamlit as st
+import pandas as pd
+import pdfplumber
+
+st.set_page_config(page_title="Your Analytical Friend", layout="wide")
+
+st.title(" Your Analytical Friend")
+st.write("Upload a PDF file, analyze data, and export it easily.")
+
+uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+
+if uploaded_file:
+    data = []
+    with pdfplumber.open(uploaded_file) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            if text:
+                rows = text.split("\n")
+                for row in rows:
+                    data.append(row.split())
+
+    if data:
+        df = pd.DataFrame(data)
+        st.subheader(" Extracted Data")
+        st.dataframe(df)
+
+        # Analysis
+        st.subheader(" Analysis Report")
+        null_count = df.isnull().sum().sum()
+        duplicate_count = df.duplicated().sum()
+        total_rows = len(df)
+
+        report = f"""
+        **Total Rows:** {total_rows}  
+        **Null Values:** {null_count}  
+        **Duplicate Rows:** {duplicate_count}  
+        """
+
+        st.markdown(report)
+
+        try:
+            df_sorted = df.drop_duplicates().sort_values(by=df.columns[0])
+            st.write("### Sample Sorted Unique Data")
+            st.dataframe(df_sorted.head(10))
+        except:
+            st.warning("⚠ Sorting skipped (No proper ID column).")
+
+        # Export
+        st.subheader("⬇ Export Data")
+        excel_file = "exported_data.xlsx"
+        df.to_excel(excel_file, index=False)
+        with open(excel_file, "rb") as f:
+            st.download_button("Download Excel File", f, file_name="exported_data.xlsx")
+
